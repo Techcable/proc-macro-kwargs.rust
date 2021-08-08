@@ -222,6 +222,7 @@ parse_macro_arg_via_syn!(NestedList::<T, P>; for <T, P> where T: MacroArg, P: Pa
 parse_macro_arg_via_syn!(Ident);
 parse_macro_arg_via_syn!(syn::Path);
 parse_macro_arg_via_syn!(syn::Type);
+parse_macro_arg_via_syn!(syn::GenericParam);
 parse_macro_arg_via_syn!(syn::Expr);
 parse_macro_arg_via_syn!(syn::Lifetime);
 parse_macro_arg_via_syn!(syn::LitStr);
