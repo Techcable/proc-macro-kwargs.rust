@@ -3,6 +3,7 @@ name = "proc-macro-kwargs"
 version = "0.1.0"
 edition = "2018"
 license = "MIT"
+repository = "https://github.com/DuckLogic/proc-macro-kwargs"
 
 [dependencies]
 quote = "1"
