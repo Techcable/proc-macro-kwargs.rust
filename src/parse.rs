@@ -181,6 +181,22 @@ impl<T: MacroArg, P: Default> FromIterator<T> for NestedList<T, P> {
         }
     }
 }
+impl<T: MacroArg, P> IntoIterator for NestedList<T, P> {
+    type Item = T;
+    type IntoIter = syn::punctuated::IntoIter::<T>;
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.into_iter()
+    }
+}
+impl<'a, T: MacroArg, P> IntoIterator for &'a NestedList<T, P> {
+    type Item = &'a T;
+    type IntoIter = syn::punctuated::Iter::<'a, T>;
+    #[inline]
+    fn into_iter(self) -> Self::IntoIter {
+        self.elements.iter()
+    }
+}
 // NOTE: Implemented manually to avoid bounds on `T`
 impl<T: MacroArg, P> Default for NestedList<T, P> {
     fn default() -> Self {
