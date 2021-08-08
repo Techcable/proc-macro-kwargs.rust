@@ -2,6 +2,8 @@
 name = "proc-macro-kwargs-derive"
 version = "0.1.0"
 edition = "2018"
+license = "MIT"
+description = "Procedural derive for proc-macro-kwargs"
 
 [lib]
 proc-macro = true
