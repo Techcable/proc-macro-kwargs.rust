@@ -1,0 +1,13 @@
+[package]
+name = "proc-macro-kwargs-derive"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "1"
+proc-macro2 = "1"
+heck = "0.3"
+quote = "1"

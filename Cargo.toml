@@ -1,0 +1,22 @@
+[package]
+name = "proc-macro-kwargs"
+version = "0.1.0"
+edition = "2018"
+license = "MIT"
+
+[dependencies]
+quote = "1"
+indexmap = "1"
+proc-macro-kwargs-derive = { version = "0.1.0", path = "lib/derive" }
+
+[dependencies.syn]
+version = "1"
+default-features = false
+features = ["parsing", "derive", "extra-traits"]
+
+[dependencies.proc-macro2]
+version = "1"
+default-features = false
+
+
+[workspace]
