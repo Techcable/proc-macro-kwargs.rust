@@ -2,6 +2,7 @@
 use std::ops::{Deref, DerefMut};
 use std::hash::Hash;
 use std::iter::{FromIterator, IntoIterator};
+use std::marker::PhantomData;
 
 use indexmap::IndexMap;
 
@@ -165,25 +166,33 @@ impl<K: MacroDictKey, V: MacroArg> DerefMut for NestedDict<K, V> {
 pub struct NestedList<T: MacroArg, P = Token![,]> {
     /// The brackets tokens
     pub brackets: syn::token::Bracket,
-    /// The list of elements, including punctuation
-    pub elements: Punctuated<T, P>
+    /// The list of elements
+    pub elements: Vec<T>,
+    /// PhantomData, for the Token
+    marker: PhantomData<P>
 }
 impl<T: MacroArg, P: Default> From<Vec<T>> for NestedList<T, P> {
+    #[inline]
     fn from(v: Vec<T>) -> Self {
-        v.into_iter().collect::<Self>()
+        NestedList {
+            brackets: Default::default(),
+            elements: v,
+            marker: PhantomData
+        }
     }
 }
 impl<T: MacroArg, P: Default> FromIterator<T> for NestedList<T, P> {
     fn from_iter<A: IntoIterator<Item=T>>(iter: A) -> Self {
         NestedList {
             brackets: Default::default(),
-            elements: iter.into_iter().collect()
+            elements: iter.into_iter().collect(),
+            marker: PhantomData
         }
     }
 }
 impl<T: MacroArg, P> IntoIterator for NestedList<T, P> {
     type Item = T;
-    type IntoIter = syn::punctuated::IntoIter::<T>;
+    type IntoIter = std::vec::IntoIter::<T>;
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
@@ -191,7 +200,7 @@ impl<T: MacroArg, P> IntoIterator for NestedList<T, P> {
 }
 impl<'a, T: MacroArg, P> IntoIterator for &'a NestedList<T, P> {
     type Item = &'a T;
-    type IntoIter = syn::punctuated::Iter::<'a, T>;
+    type IntoIter = std::slice::Iter::<'a, T>;
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.elements.iter()
@@ -202,12 +211,13 @@ impl<T: MacroArg, P> Default for NestedList<T, P> {
     fn default() -> Self {
         NestedList {
             brackets: Default::default(),
-            elements: Default::default()
+            elements: Default::default(),
+            marker: PhantomData
         }
     }
 } 
 impl<T: MacroArg, P> Deref for NestedList<T, P> {
-    type Target = Punctuated<T, P>;
+    type Target = Vec<T>;
     #[inline]
     fn deref(&self) -> &Self::Target {
         &self.elements
@@ -224,10 +234,11 @@ impl<T: MacroArg, P: Parse> Parse for NestedList<T, P> {
         let content;
         Ok(NestedList {
             brackets: bracketed!(content in stream),
-            elements: Punctuated::parse_terminated_with(
+            elements: Punctuated::<T, P>::parse_terminated_with(
                 &content,
                 T::parse_macro_arg
-            )?
+            )?.into_iter().collect(),
+            marker: PhantomData
         })
     }
 }
