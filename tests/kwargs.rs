@@ -45,7 +45,7 @@ fn nesting() {
         list => [1, 4, 7]
     "##).unwrap(), NestedArgs {
         one: true,
-        list: vec![1, 4, 7].into(),
+        list: vec![1, 4, 7],
         nested: None
     });
     assert_eq!(syn::parse_str::<NestedArgs>(r##"one => true,

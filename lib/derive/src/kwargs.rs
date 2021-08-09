@@ -125,6 +125,7 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
         #original_vis enum #id_enum_name {
             #(#variant_names),*
         }
+        #[automatically_derived]
         impl proc_macro_kwargs::args::KeywordArgId for #id_enum_name {
             fn as_str(&self) -> &'_ str {
                 match *self {
@@ -142,6 +143,7 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
         #original_vis enum #parsed_arg_name {
             #(#variant_names ( #parsed_arg_types )),*
         }
+        #[automatically_derived]
         impl proc_macro_kwargs::args::ParsedArgValue<#id_enum_name> for #parsed_arg_name {
             fn id(&self) -> #id_enum_name {
                 match *self {
@@ -160,6 +162,7 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
                 })
             }
         }
+        #[automatically_derived]
         impl #impl_generics proc_macro_kwargs::MacroKeywordArgs
                 for #original_ident #ty_generics #where_clause {
             type ArgId = #id_enum_name;
@@ -177,6 +180,7 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
                 })
             }
         }
+        #[automatically_derived]
         impl #impl_generics syn::parse::Parse
                 for #original_ident #ty_generics #where_clause {
             fn parse(stream: syn::parse::ParseStream) -> syn::Result<Self> {
@@ -185,12 +189,13 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
         }
         /// Parse as a nested value inside another set of arguments,
         /// by surrounding it with braces `{}`
+        #[automatically_derived]
         impl #impl_generics proc_macro_kwargs::MacroArg
                 for #original_ident #ty_generics #where_clause {
             fn parse_macro_arg(stream: syn::parse::ParseStream) -> syn::Result<Self> {
                 let content;
                 syn::braced!(content in stream);
-                Ok(content.parse()?)
+                content.parse()
             }
         }
     })
