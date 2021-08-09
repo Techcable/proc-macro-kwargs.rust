@@ -265,7 +265,7 @@ impl Parse for FieldAttrs {
                     let renamed = stream.parse::<LitStr>()?;
                     res.rename = Some(renamed.value());
                 },
-                "with" | "with_func" => {
+                "with_func" => {
                     if res.with_func.is_some() {
                         return Err(Error::new(
                             name.span(),
