@@ -136,7 +136,7 @@ impl<K: MacroKeywordArgs> MacroArg for ParsedKeywordArguments<K> {
     fn parse_macro_arg(stream: ParseStream) -> syn::Result<Self> {
         let content;
         braced!(content in stream);
-        Ok(content.parse::<Self>()?)
+        content.parse::<Self>()
     }
 }
 

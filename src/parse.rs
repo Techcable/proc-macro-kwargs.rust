@@ -65,7 +65,7 @@ macro_rules! parse_macro_arg_via_syn {
     ($target:path; for <$($lt:lifetime,)* $($param:ident),*> $(where $($where_tks:tt)*)?) => {
         impl<$($lt,)* $($param),*> $crate::parse::MacroArg for $target $(where $($where_tks)* )* {
             fn parse_macro_arg(stream: syn::parse::ParseStream) -> syn::Result<Self> {
-                Ok(stream.parse()?)
+                stream.parse()
             }
         }
     };
