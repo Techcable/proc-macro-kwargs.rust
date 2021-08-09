@@ -322,6 +322,12 @@ impl<T: Parse> Syn<T> {
         self.0
     }
 }
+impl<T: Parse> From<T> for Syn<T> {
+    #[inline]
+    fn from(t: T) -> Syn<T> {
+        Syn(t)
+    }
+}
 impl<T: Parse> Parse for Syn<T> {
     fn parse(stream: ParseStream) -> syn::Result<Self> {
         Ok(Syn(stream.parse()?))
