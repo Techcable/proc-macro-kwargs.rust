@@ -1,9 +1,9 @@
 proc-macro-kwargs
 ==================
-Straightforward argument parsing for procedural macros.
+Keyword argument parsing for function-like procedural macros (Rust).
 
 ## Example
-````
+````rust
 example_macro!(
     name => bar,
     foo => i32
@@ -13,7 +13,7 @@ example_macro!(
 And here is the corresponding code in the proc macro:
 
 
-````
+````rust
 #[derive(MacroKeywordArgs)]
 struct MacroArgs {
     name: Ident,
@@ -24,3 +24,5 @@ struct MacroArgs {
 }
 
 ````
+
+See the [tests](./tests/kwargs.rs) for more detailed examples

@@ -1,4 +1,4 @@
-//! Runtime library for `proc-macro-kwargs`
+//! Keyword argument parsing for function-like procedural macros.
 #![deny(missing_docs)]
 #![feature(trait_alias)]
 pub use proc_macro_kwargs_derive::MacroKeywordArgs;

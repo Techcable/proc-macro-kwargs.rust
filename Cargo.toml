@@ -3,7 +3,7 @@ name = "proc-macro-kwargs"
 version = "0.1.3"
 edition = "2018"
 license = "MIT"
-description = "Parsing keyword arguments for proc-macros"
+description = "Keyword argument parsing for function-like proc-macros"
 repository = "https://github.com/DuckLogic/proc-macro-kwargs"
 
 [dependencies]
