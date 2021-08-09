@@ -6,7 +6,7 @@ use std::marker::PhantomData;
 
 use indexmap::IndexMap;
 
-use syn::{bracketed, braced, Token};
+use syn::{Token, braced, bracketed, parenthesized};
 use syn::spanned::Spanned;
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
@@ -157,6 +157,49 @@ impl<K: MacroDictKey, V: MacroArg> DerefMut for NestedDict<K, V> {
     }
 }
 
+/// A version of `Option` that is parsed with explicit `Some(<inner>)`
+/// or `None` syntax
+///
+/// This is as opposed to a regular `Option`, which requires
+/// no extra syntax and always parses to `Some`
+/// (it's intended for use with optional args)
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
+pub struct ExplicitOption<T>(pub Option<T>);
+impl<T> Deref for ExplicitOption<T> {
+    type Target = Option<T>;
+    #[inline]
+    fn deref(&self) -> &Option<T> {
+        &self.0
+    }
+}
+impl<T> From<Option<T>> for ExplicitOption<T> {
+    #[inline]
+    fn from(opt: Option<T>) -> Self {
+        ExplicitOption(opt)
+    }
+}
+impl<T> From<ExplicitOption<T>> for Option<T> {
+    #[inline]
+    fn from(explicit: ExplicitOption<T>) -> Option<T> {
+        explicit.0
+    }
+}
+impl<T: MacroArg> MacroArg for ExplicitOption<T> {
+    fn parse_macro_arg(stream: ParseStream) -> syn::Result<Self> {
+        if stream.peek(syn::Ident) {
+            let ident = stream.parse::<Ident>().unwrap();
+            if ident == "Some" {
+                let content;
+                parenthesized!(content in stream);
+                return Ok(ExplicitOption(Some(T::parse_macro_arg(&content)?)));
+            } else if ident == "None" {
+                return Ok(ExplicitOption(None));
+            }
+        }
+        // fall-through to error
+        Err(stream.error("Expected either `Some` or `None`"))
+    }
+}
 
 /// A nested list of [Punctuated] items,
 /// surrounded by brackets (ex. `[1, 2, 3]`)
@@ -179,6 +222,12 @@ impl<T: MacroArg, P: Default> From<Vec<T>> for NestedList<T, P> {
             elements: v,
             marker: PhantomData
         }
+    }
+}
+impl<T: MacroArg, P> From<NestedList<T, P>> for Vec<T> {
+    #[inline]
+    fn from(v: NestedList<T, P>) -> Vec<T> {
+        v.elements
     }
 }
 impl<T: MacroArg, P: Default> FromIterator<T> for NestedList<T, P> {
@@ -303,3 +352,54 @@ impl<T: Parse> DerefMut for Syn<T> {
     }
 }
 parse_macro_arg_via_syn!(Syn::<T>; for <T> where T: Parse);
+
+/// Parses a `MacroArg` type from a string
+///
+/// Analogous to [syn::parse_str]
+pub fn parse_str<T: MacroArg>(s: &str) -> syn::Result<T> {
+    struct ParseWrapper<T: MacroArg>(T);
+    impl<T: MacroArg> Parse for ParseWrapper<T> {
+        fn parse(stream: ParseStream) -> syn::Result<Self> {
+            Ok(ParseWrapper(T::parse_macro_arg(stream)?))
+        }
+    }
+    syn::parse_str::<ParseWrapper<T>>(s).map(|wrap| wrap.0)
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn ints() {
+        assert_eq!(
+            parse_str::<i32>("5").unwrap(),
+            5
+        );
+        assert_eq!(
+            parse_str::<i32>("8").unwrap(),
+            8
+        );
+    }
+    #[test]
+    fn strs() {
+        assert_eq!(
+            parse_str::<String>(r##""foo""##).unwrap(),
+            String::from("foo")
+        );
+    }
+    #[test]
+    fn explicit_option() {
+        assert_eq!(
+            parse_str::<ExplicitOption::<i32>>("None").unwrap(),
+            ExplicitOption(None)
+        );
+        assert_eq!(
+            parse_str::<ExplicitOption::<i32>>("Some(5)").unwrap(),
+            ExplicitOption(Some(5))
+        );
+        assert_eq!(
+            parse_str::<ExplicitOption::<String>>(r##"Some("foo")"##).unwrap(),
+            ExplicitOption(Some(String::from("foo")))
+        );
+    }
+}
