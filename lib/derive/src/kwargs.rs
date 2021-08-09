@@ -1,8 +1,4 @@
-use syn::{
-    DeriveInput, Error, Data, LitStr, Token, Fields,
-    Attribute, spanned::Spanned,
-    parse::{Parse, ParseStream}, 
-};
+use syn::{Attribute, Data, DeriveInput, Error, Fields, LitStr, Path, Token, Type, parse::{Parse, ParseStream}, spanned::Spanned};
 use proc_macro2::{Ident, TokenStream};
 use quote::{quote, quote_spanned, format_ident};
 
@@ -57,9 +53,27 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
         arg_name_strings.push(arg_name);
         parsed_arg_types.push(&field.ty);
         let field_ty = &field.ty;
-        parse_invocations.push(quote_spanned!(
-            field.ty.span() => <#field_ty as proc_macro_kwargs::MacroArg>::parse_macro_arg(stream)?
-        ));
+        match (attr.with_func.as_ref(), attr.with_wrapper.as_ref()) {
+            (Some(_), Some(_)) => unreachable!("conflicting 'with' options"),
+            (Some(with_func), None) => {
+                parse_invocations.push(quote_spanned!(
+                    with_func.span() => #with_func ?
+                ));
+            },
+            (None, Some(wrapper_ty)) => {
+                parse_invocations.push(quote_spanned!(
+                    wrapper_ty.span() => {
+                        let wrapper = <#wrapper_ty as proc_macro_kwargs::MacroArg>::parse_macro_arg(stream)?;
+                        <#wrapper_ty as core::convert::Into::<#field_ty>>::into(wrapper)
+                    }
+                ))
+            }
+            (None, None) => {
+                parse_invocations.push(quote_spanned!(
+                    field.ty.span() => <#field_ty as proc_macro_kwargs::MacroArg>::parse_macro_arg(stream)?
+                ));
+            }
+        }
         field_names.push(ident.clone());
         /*
          * In order to produce good errors,
@@ -183,14 +197,28 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
 }
 
 struct FieldAttrs {
+    /// If this field is optional,
+    /// and should be replaced with its `Default`
+    /// value if missing
     optional: bool,
-    rename: Option<String>
+    /// Rename the field's expected.
+    rename: Option<String>,
+    /// Parse the value by delegating to the specified function
+    ///
+    /// The function's signature must be
+    /// `fn(ParseStream) -> syn::Result<T>`
+    with_func: Option<Path>,
+    /// Parse the value by delegating to the specified "wrapper"
+    /// type, then converts it to the actual type via `Into`
+    with_wrapper: Option<Type>
 }
 impl Default for FieldAttrs {
     fn default() -> Self {
         FieldAttrs {
             optional: false,
-            rename: None
+            rename: None,
+            with_func: None,
+            with_wrapper: None
         }
     }
 }
@@ -237,6 +265,40 @@ impl Parse for FieldAttrs {
                     let renamed = stream.parse::<LitStr>()?;
                     res.rename = Some(renamed.value());
                 },
+                "with" | "with_func" => {
+                    if res.with_func.is_some() {
+                        return Err(Error::new(
+                            name.span(),
+                            "Already specified `with_func` option"
+                        ))
+                    }
+                    if res.with_wrapper.is_some() {
+                        return Err(Error::new(
+                            name.span(),
+                            "The `with_func` option conflicts with the `with_wrapper` option"
+                        ))
+                    }
+                    stream.parse::<Token![=]>()?;
+                    let s = stream.parse::<LitStr>()?;
+                    res.with_func = Some(s.parse::<syn::Path>()?);
+                },
+                "with_wrapper" => {
+                    if res.with_wrapper.is_some() {
+                        return Err(Error::new(
+                            name.span(),
+                            "Already specified `with_wrapper` option"
+                        ))
+                    }
+                    if res.with_func.is_some() {
+                        return Err(Error::new(
+                            name.span(),
+                            "The `with_wrapper` option conflicts with the `with_func` option"
+                        ))
+                    }                   
+                    stream.parse::<Token![=]>()?;
+                    let s = stream.parse::<LitStr>()?;
+                    res.with_wrapper = Some(s.parse::<Type>()?);
+                }
                 _ => {
                     return Err(Error::new(
                         name.span(),

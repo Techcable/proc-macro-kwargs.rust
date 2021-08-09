@@ -31,8 +31,8 @@ fn basic_example() {
 #[derive(MacroKeywordArgs, Debug, PartialEq, Default)]
 struct NestedArgs {
     one: bool,
-    #[kwarg(optional)]
-    list: NestedList<u32>,
+    #[kwarg(optional, with_wrapper = "NestedList<u32>")]
+    list: Vec<u32>,
     #[kwarg(optional)]
     nested: Option<ExampleArgs>
 }
