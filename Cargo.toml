@@ -1,6 +1,6 @@
 [package]
 name = "proc-macro-kwargs"
-version = "0.1.4"
+version = "0.1.5"
 edition = "2018"
 license = "MIT"
 description = "Keyword argument parsing for function-like proc-macros"
