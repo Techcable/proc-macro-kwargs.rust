@@ -307,7 +307,8 @@ parse_macro_arg_via_syn!(syn::LitFloat);
 parse_macro_arg_via_syn!(syn::LitBool);
 parse_macro_arg_via_syn!(syn::Lit);
 parse_macro_arg_via_syn!(syn::Meta);
-parse_macro_arg_via_syn!(syn::NestedMeta);
+// TODO: What is the replacement for this in syn v2?
+// parse_macro_arg_via_syn!(syn::NestedMeta);
 parse_macro_arg_via_syn!(syn::Visibility);
 /// Wrapper type that parses via syn's [Parse] trait
 ///

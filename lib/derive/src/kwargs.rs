@@ -44,9 +44,9 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
         let ident = field.ident.as_ref().unwrap();
         let arg_name = attr.rename.clone()
             .unwrap_or_else(|| ident.to_string());
-        use heck::CamelCase;
+        use heck::ToUpperCamelCase;
         let variant_name = Ident::new(
-            &ident.to_string().to_camel_case(),
+            &ident.to_string().to_upper_camel_case(),
             ident.span(),
         );
         variant_names.push(variant_name.clone());
@@ -217,6 +217,7 @@ struct FieldAttrs {
     /// type, then converts it to the actual type via `Into`
     with_wrapper: Option<Type>
 }
+#[allow(clippy::derivable_impls)]
 impl Default for FieldAttrs {
     fn default() -> Self {
         FieldAttrs {
@@ -231,10 +232,10 @@ impl FieldAttrs {
     fn find_attr(attrs: &[Attribute]) -> syn::Result<Option<Self>> {
         let mut res = None;
         for attr in attrs {
-            if attr.path.is_ident("kwarg") {
+            if attr.path().is_ident("kwarg") {
                 if res.is_some() {
                     return Err(Error::new(
-                        attr.path.span(),
+                        attr.path().span(),
                         "Duplicate `kwarg` attributes"
                     ))
                 }

@@ -1,16 +1,17 @@
 [package]
 name = "proc-macro-kwargs-derive"
-version = "0.1.5"
-edition = "2018"
-license = "MIT"
+version.workspace = true
 description = "Procedural derive for proc-macro-kwargs"
+edition.workspace = true
+repository.workspace = true
+license.workspace = true
 
 [lib]
 proc-macro = true
 
 [dependencies]
-syn = "1"
-proc-macro2 = "1"
-heck = "0.3"
+syn = { workspace = true, features = ["proc-macro"] }
+proc-macro2 = { workspace = true, features = ["proc-macro"] }
+heck = "0.4"
 quote = "1"
 
