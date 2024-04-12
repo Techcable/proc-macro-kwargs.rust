@@ -12,6 +12,6 @@ proc-macro = true
 [dependencies]
 syn = { workspace = true, features = ["proc-macro"] }
 proc-macro2 = { workspace = true, features = ["proc-macro"] }
-heck = "0.4"
+heck = "0.5"
 quote = "1"
 
