@@ -3,11 +3,11 @@
 #![feature(trait_alias)]
 pub use proc_macro_kwargs_derive::MacroKeywordArgs;
 
-pub mod parse;
 pub mod args;
+pub mod parse;
 
-pub use parse::{MacroArg};
-pub use args::{MacroKeywordArgs};
+pub use args::MacroKeywordArgs;
+pub use parse::MacroArg;
 
 /// Combine multiple `syn` errors into a single error struct
 ///

@@ -1,13 +1,20 @@
-use syn::{Attribute, Data, DeriveInput, Error, Fields, LitStr, Path, Token, Type, parse::{Parse, ParseStream}, spanned::Spanned};
 use proc_macro2::{Ident, TokenStream};
-use quote::{quote, quote_spanned, format_ident};
+use quote::{format_ident, quote, quote_spanned};
+use syn::{
+    parse::{Parse, ParseStream},
+    spanned::Spanned,
+    Attribute, Data, DeriveInput, Error, Fields, LitStr, Path, Token, Type,
+};
 
 pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
     let s = match input.data {
         Data::Struct(ref s) => s,
         Data::Enum(ref e) => {
-            return Err(Error::new(e.enum_token.span(), "Enums are currently unsupported"));
-        },
+            return Err(Error::new(
+                e.enum_token.span(),
+                "Enums are currently unsupported",
+            ));
+        }
         Data::Union(ref u) => {
             return Err(Error::new(u.union_token.span(), "Unions are unsupported"))
         }
@@ -15,21 +22,13 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
     let named_fields = match s.fields {
         Fields::Named(ref named) => named,
         Fields::Unnamed(ref s) => {
-            return Err(Error::new(
-                s.span(),
-                "Unnamed fields are forbidden"
-            ));
-        },
-        Fields::Unit => {
-            return Err(Error::new(
-                input.ident.span(),
-                "Unit structs are forbidden"
-            ))
+            return Err(Error::new(s.span(), "Unnamed fields are forbidden"));
         }
+        Fields::Unit => return Err(Error::new(input.ident.span(), "Unit structs are forbidden")),
     };
     let original_ident = &input.ident;
     let original_vis = &input.vis;
-    let id_enum_name = format_ident!("{}ArgId", input.ident); 
+    let id_enum_name = format_ident!("{}ArgId", input.ident);
     let parsed_arg_name = format_ident!("{}ParsedArg", input.ident);
     let mut variant_names = Vec::new();
     let mut field_names = Vec::new();
@@ -39,16 +38,11 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
     let mut arg_name_strings = Vec::new();
     let mut parse_invocations = Vec::new();
     for field in named_fields.named.iter() {
-        let attr = FieldAttrs::find_attr(&field.attrs)?
-            .unwrap_or_default();
+        let attr = FieldAttrs::find_attr(&field.attrs)?.unwrap_or_default();
         let ident = field.ident.as_ref().unwrap();
-        let arg_name = attr.rename.clone()
-            .unwrap_or_else(|| ident.to_string());
+        let arg_name = attr.rename.clone().unwrap_or_else(|| ident.to_string());
         use heck::ToUpperCamelCase;
-        let variant_name = Ident::new(
-            &ident.to_string().to_upper_camel_case(),
-            ident.span(),
-        );
+        let variant_name = Ident::new(&ident.to_string().to_upper_camel_case(), ident.span());
         variant_names.push(variant_name.clone());
         arg_name_strings.push(arg_name);
         parsed_arg_types.push(&field.ty);
@@ -86,9 +80,10 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
          * messages for missing required arguments.
          */
         let cast_failure = quote!(unreachable!(
-            "got {:?} for {}", other.id(),
-            stringify!(#variant_name))
-        );
+            "got {:?} for {}",
+            other.id(),
+            stringify!(#variant_name)
+        ));
         if attr.optional {
             let default_val = quote_spanned!(
                 field.ty.span() => <#field_ty as Default>::default()
@@ -117,8 +112,7 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
             field_inits.push(quote!(#ident.unwrap()))
         }
     }
-    let (impl_generics, ty_generics, where_clause) = input.generics
-        .split_for_impl();
+    let (impl_generics, ty_generics, where_clause) = input.generics.split_for_impl();
     Ok(quote! {
         #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
         #[doc(hidden)]
@@ -137,7 +131,7 @@ pub fn run_derive(input: &DeriveInput) -> Result<TokenStream, syn::Error> {
                     #(#arg_name_strings => Some(Self::#variant_names),)*
                     _ => None
                 }
-            } 
+            }
         }
         #[doc(hidden)]
         #original_vis enum #parsed_arg_name {
@@ -215,7 +209,7 @@ struct FieldAttrs {
     with_func: Option<Path>,
     /// Parse the value by delegating to the specified "wrapper"
     /// type, then converts it to the actual type via `Into`
-    with_wrapper: Option<Type>
+    with_wrapper: Option<Type>,
 }
 #[allow(clippy::derivable_impls)]
 impl Default for FieldAttrs {
@@ -224,7 +218,7 @@ impl Default for FieldAttrs {
             optional: false,
             rename: None,
             with_func: None,
-            with_wrapper: None
+            with_wrapper: None,
         }
     }
 }
@@ -236,8 +230,8 @@ impl FieldAttrs {
                 if res.is_some() {
                     return Err(Error::new(
                         attr.path().span(),
-                        "Duplicate `kwarg` attributes"
-                    ))
+                        "Duplicate `kwarg` attributes",
+                    ));
                 }
                 res = Some(attr.parse_args::<Self>()?);
             }
@@ -255,72 +249,64 @@ impl Parse for FieldAttrs {
                     if res.optional {
                         return Err(Error::new(
                             name.span(),
-                            "Already specified `optional` attribute"
+                            "Already specified `optional` attribute",
                         ));
                     }
                     res.optional = true;
-                },
+                }
                 "rename" => {
                     if res.rename.is_some() {
-                        return Err(Error::new(
-                            name.span(),
-                            "Already specified `rename` option"
-                        ))
+                        return Err(Error::new(name.span(), "Already specified `rename` option"));
                     }
                     stream.parse::<Token![=]>()?;
                     let renamed = stream.parse::<LitStr>()?;
                     res.rename = Some(renamed.value());
-                },
+                }
                 "with_func" => {
                     if res.with_func.is_some() {
                         return Err(Error::new(
                             name.span(),
-                            "Already specified `with_func` option"
-                        ))
+                            "Already specified `with_func` option",
+                        ));
                     }
                     if res.with_wrapper.is_some() {
                         return Err(Error::new(
                             name.span(),
-                            "The `with_func` option conflicts with the `with_wrapper` option"
-                        ))
+                            "The `with_func` option conflicts with the `with_wrapper` option",
+                        ));
                     }
                     stream.parse::<Token![=]>()?;
                     let s = stream.parse::<LitStr>()?;
                     res.with_func = Some(s.parse::<syn::Path>()?);
-                },
+                }
                 "with_wrapper" => {
                     if res.with_wrapper.is_some() {
                         return Err(Error::new(
                             name.span(),
-                            "Already specified `with_wrapper` option"
-                        ))
+                            "Already specified `with_wrapper` option",
+                        ));
                     }
                     if res.with_func.is_some() {
                         return Err(Error::new(
                             name.span(),
-                            "The `with_wrapper` option conflicts with the `with_func` option"
-                        ))
-                    }                   
+                            "The `with_wrapper` option conflicts with the `with_func` option",
+                        ));
+                    }
                     stream.parse::<Token![=]>()?;
                     let s = stream.parse::<LitStr>()?;
                     res.with_wrapper = Some(s.parse::<Type>()?);
                 }
-                _ => {
-                    return Err(Error::new(
-                        name.span(),
-                        "Unknown option name"
-                    ))
-                }
+                _ => return Err(Error::new(name.span(), "Unknown option name")),
             }
             if stream.peek(Token![,]) {
                 stream.parse::<Token![,]>()?;
-                continue
+                continue;
             } else {
-                break
+                break;
             }
         }
         if !stream.is_empty() {
-            return Err(stream.error("Unexpected token"))
+            return Err(stream.error("Unexpected token"));
         }
         Ok(res)
     }

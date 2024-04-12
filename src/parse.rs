@@ -1,16 +1,16 @@
 //! Utilities for parsing
-use std::ops::{Deref, DerefMut};
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::ops::{Deref, DerefMut};
 
 use indexmap::IndexMap;
 
-use syn::{Token, braced, bracketed, parenthesized};
-use syn::spanned::Spanned;
-use syn::parse::{Parse, ParseStream};
-use syn::punctuated::Punctuated;
 use proc_macro2::{Ident, TokenStream};
 use quote::ToTokens;
+use syn::parse::{Parse, ParseStream};
+use syn::punctuated::Punctuated;
+use syn::spanned::Spanned;
+use syn::{braced, bracketed, parenthesized, Token};
 
 /// A type that can be parsed as an argument
 /// to a macro.
@@ -32,7 +32,7 @@ pub trait MacroArg: Sized {
 /// Parses an optional [MacroArg],
 /// always returning the `Some` variant
 ///
-/// The `None` variant will only be generated 
+/// The `None` variant will only be generated
 /// if the argument is missing
 impl<T: MacroArg> MacroArg for Option<T> {
     fn parse_macro_arg(stream: ParseStream) -> syn::Result<Self> {
@@ -49,7 +49,7 @@ macro_rules! macro_arg_parse_map {
                 Ok($transform)
             }
         }
-    }
+    };
 }
 macro_rules! macro_arg_parse_int {
     ($($target:ty),*) => {
@@ -69,10 +69,7 @@ macro_rules! parse_macro_arg_via_syn {
         }
     };
 }
-macro_arg_parse_int!(
-    u8, u16, u32, u64, usize,
-    i8, i16, i32, i64, isize
-);
+macro_arg_parse_int!(u8, u16, u32, u64, usize, i8, i16, i32, i64, isize);
 macro_arg_parse_map!(String; via syn::LitStr, |s| s.value());
 macro_arg_parse_map!(bool; via syn::LitBool, |s| s.value());
 macro_arg_parse_map!(f64; via syn::LitFloat, |f| f.base10_parse::<f64>()?);
@@ -85,10 +82,10 @@ pub trait MacroDictKey = MacroArg + Eq + Hash + Spanned;
 /// A pair of values in a [NestedDict]
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct KeyValuePair<K: MacroDictKey, V: MacroArg> {
-    /// The key 
+    /// The key
     pub key: K,
     /// The value
-    pub value: V
+    pub value: V,
 }
 impl<K: MacroDictKey, V: MacroArg> Parse for KeyValuePair<K, V> {
     fn parse(stream: ParseStream) -> syn::Result<Self> {
@@ -112,18 +109,18 @@ pub struct NestedDict<K: MacroDictKey, V: MacroArg> {
     /// The brace token
     pub braces: syn::token::Brace,
     /// The underlying map of keys to values
-    pub elements: IndexMap<K, V>
+    pub elements: IndexMap<K, V>,
 }
 impl<K: MacroDictKey, V: MacroArg> NestedDict<K, V> {
-    fn try_extend_pairs(&mut self, iter: impl Iterator<Item=KeyValuePair<K, V>>) -> Result<(), syn::Error> {
+    fn try_extend_pairs(
+        &mut self,
+        iter: impl Iterator<Item = KeyValuePair<K, V>>,
+    ) -> Result<(), syn::Error> {
         for pair in iter {
             let key_span = pair.key.span();
             let existing = self.elements.insert(pair.key, pair.value);
             if existing.is_some() {
-                return Err(syn::Error::new(
-                    key_span,
-                    "Duplicate keys",
-                ));
+                return Err(syn::Error::new(key_span, "Duplicate keys"));
             }
         }
         Ok(())
@@ -135,12 +132,12 @@ impl<K: MacroDictKey, V: MacroArg> MacroArg for NestedDict<K, V> {
         let braces = braced!(content in stream);
         let pairs = Punctuated::<KeyValuePair<K, V>, Token![,]>::parse_terminated(&content)?;
         let mut res = NestedDict {
-            braces, elements: IndexMap::default()
+            braces,
+            elements: IndexMap::default(),
         };
         res.try_extend_pairs(pairs.into_iter())?;
         Ok(res)
     }
-
 }
 impl<K: MacroDictKey, V: MacroArg> Deref for NestedDict<K, V> {
     type Target = IndexMap<K, V>;
@@ -211,7 +208,7 @@ pub struct NestedList<T: MacroArg, P = Token![,]> {
     /// The list of elements
     pub elements: Vec<T>,
     /// PhantomData, for the Token
-    marker: PhantomData<P>
+    marker: PhantomData<P>,
 }
 impl<T: MacroArg, P: Default> From<Vec<T>> for NestedList<T, P> {
     #[inline]
@@ -219,7 +216,7 @@ impl<T: MacroArg, P: Default> From<Vec<T>> for NestedList<T, P> {
         NestedList {
             brackets: Default::default(),
             elements: v,
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
@@ -230,17 +227,17 @@ impl<T: MacroArg, P> From<NestedList<T, P>> for Vec<T> {
     }
 }
 impl<T: MacroArg, P: Default> FromIterator<T> for NestedList<T, P> {
-    fn from_iter<A: IntoIterator<Item=T>>(iter: A) -> Self {
+    fn from_iter<A: IntoIterator<Item = T>>(iter: A) -> Self {
         NestedList {
             brackets: Default::default(),
             elements: iter.into_iter().collect(),
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
 }
 impl<T: MacroArg, P> IntoIterator for NestedList<T, P> {
     type Item = T;
-    type IntoIter = std::vec::IntoIter::<T>;
+    type IntoIter = std::vec::IntoIter<T>;
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.elements.into_iter()
@@ -248,7 +245,7 @@ impl<T: MacroArg, P> IntoIterator for NestedList<T, P> {
 }
 impl<'a, T: MacroArg, P> IntoIterator for &'a NestedList<T, P> {
     type Item = &'a T;
-    type IntoIter = std::slice::Iter::<'a, T>;
+    type IntoIter = std::slice::Iter<'a, T>;
     #[inline]
     fn into_iter(self) -> Self::IntoIter {
         self.elements.iter()
@@ -260,10 +257,10 @@ impl<T: MacroArg, P> Default for NestedList<T, P> {
         NestedList {
             brackets: Default::default(),
             elements: Default::default(),
-            marker: PhantomData
+            marker: PhantomData,
         }
     }
-} 
+}
 impl<T: MacroArg, P> Deref for NestedList<T, P> {
     type Target = Vec<T>;
     #[inline]
@@ -282,17 +279,14 @@ impl<T: MacroArg, P: Parse> Parse for NestedList<T, P> {
         let content;
         Ok(NestedList {
             brackets: bracketed!(content in stream),
-            elements: Punctuated::<T, P>::parse_terminated_with(
-                &content,
-                T::parse_macro_arg
-            )?.into_iter().collect(),
-            marker: PhantomData
+            elements: Punctuated::<T, P>::parse_terminated_with(&content, T::parse_macro_arg)?
+                .into_iter()
+                .collect(),
+            marker: PhantomData,
         })
     }
 }
 parse_macro_arg_via_syn!(NestedList::<T, P>; for <T, P> where T: MacroArg, P: Parse);
-
-
 
 parse_macro_arg_via_syn!(Ident);
 parse_macro_arg_via_syn!(syn::Path);
@@ -377,14 +371,8 @@ mod test {
     use super::*;
     #[test]
     fn ints() {
-        assert_eq!(
-            parse_str::<i32>("5").unwrap(),
-            5
-        );
-        assert_eq!(
-            parse_str::<i32>("8").unwrap(),
-            8
-        );
+        assert_eq!(parse_str::<i32>("5").unwrap(), 5);
+        assert_eq!(parse_str::<i32>("8").unwrap(), 8);
     }
     #[test]
     fn strs() {

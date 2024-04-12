@@ -2,14 +2,14 @@
 //!
 //! Generally speaking,
 //! this should be considered an implementation detail of the macro.
-use std::hash::Hash;
 use std::fmt::Debug;
+use std::hash::Hash;
 
-use indexmap::{IndexMap, map::Entry};
+use indexmap::{map::Entry, IndexMap};
 
 use proc_macro2::{Ident, Span};
-use syn::{Token, punctuated::Punctuated, ext::IdentExt, braced};
 use syn::parse::{Parse, ParseStream};
+use syn::{braced, ext::IdentExt, punctuated::Punctuated, Token};
 
 use crate::MacroArg;
 
@@ -18,11 +18,7 @@ pub trait ParsedArgValue<Id: KeywordArgId>: Sized {
     /// Return the corresponding id
     fn id(&self) -> Id;
     /// Parse the argument with the specified id
-    fn parse_with_id(
-        id: Id,
-        id_span: Span,
-        stream: ParseStream
-    ) -> syn::Result<Self>;
+    fn parse_with_id(id: Id, id_span: Span, stream: ParseStream) -> syn::Result<Self>;
 }
 /// The unique id for a single keyword argument
 pub trait KeywordArgId: Copy + Eq + Hash + Debug {
@@ -54,15 +50,11 @@ impl<K: MacroKeywordArgs> Parse for KeywordArg<K> {
         let id = K::ArgId::from_name(&name_text).ok_or_else(|| {
             syn::Error::new(
                 name.span(),
-                format!("Unknown argument name: {}", &name_text)
+                format!("Unknown argument name: {}", &name_text),
             )
         })?;
         stream.parse::<Token![=>]>()?;
-        let value = K::ParsedArg::parse_with_id(
-            id,
-            name.span(),
-            stream
-        )?;
+        let value = K::ParsedArg::parse_with_id(id, name.span(), stream)?;
         Ok(KeywordArg { id, name, value })
     }
 }
@@ -92,20 +84,21 @@ impl<K: MacroKeywordArgs> ParsedKeywordArguments<K> {
         self.take(id).ok_or_else(|| {
             syn::Error::new(
                 Span::call_site(),
-                format!("Missing required argument `{}`", id.as_str())
+                format!("Missing required argument `{}`", id.as_str()),
             )
         })
     }
     /// Iterate over the original list of arguments,
     /// in the order of their declaration
     #[inline]
-    pub fn iter(&self) -> impl Iterator<Item=&'_ KeywordArg<K>> + '_ {
+    pub fn iter(&self) -> impl Iterator<Item = &'_ KeywordArg<K>> + '_ {
         self.by_name.values()
     }
 }
 impl<K: MacroKeywordArgs> Parse for ParsedKeywordArguments<K> {
     fn parse(stream: ParseStream) -> syn::Result<Self> {
-        let punct: Punctuated<KeywordArg<K>, Token![,]> = stream.call(Punctuated::parse_terminated)?;
+        let punct: Punctuated<KeywordArg<K>, Token![,]> =
+            stream.call(Punctuated::parse_terminated)?;
         let mut by_name = IndexMap::with_capacity(punct.len());
         let mut errors = Vec::new();
         for arg in punct.into_iter() {
@@ -113,23 +106,18 @@ impl<K: MacroKeywordArgs> Parse for ParsedKeywordArguments<K> {
                 Entry::Occupied(_entry) => {
                     errors.push(syn::Error::new(
                         arg.name.span(),
-                        format!(
-                            "Duplicate values for argument: {}",
-                            arg.name
-                        )
+                        format!("Duplicate values for argument: {}", arg.name),
                     ));
-                },
+                }
                 Entry::Vacant(entry) => {
                     entry.insert(arg);
                 }
             }
         }
         if !errors.is_empty() {
-            return Err(crate::combine_errors(errors))
+            return Err(crate::combine_errors(errors));
         }
-        Ok(ParsedKeywordArguments {
-            by_name
-        })
+        Ok(ParsedKeywordArguments { by_name })
     }
 }
 impl<K: MacroKeywordArgs> MacroArg for ParsedKeywordArguments<K> {
@@ -141,7 +129,7 @@ impl<K: MacroKeywordArgs> MacroArg for ParsedKeywordArguments<K> {
 }
 
 /// The whole point.
-/// 
+///
 /// Defines the interface for parsing keyword args.
 ///
 /// A set of argument can itself be nested as a `MacroArg`,
@@ -153,6 +141,5 @@ pub trait MacroKeywordArgs: MacroArg + Parse {
     type ParsedArg: ParsedArgValue<Self::ArgId>;
     /// Create the parsed arguments struct from
     /// its list of arguments
-    fn from_keyword_args(kwargs: ParsedKeywordArguments<Self>)
-        -> Result<Self, syn::Error>;
+    fn from_keyword_args(kwargs: ParsedKeywordArguments<Self>) -> Result<Self, syn::Error>;
 }
