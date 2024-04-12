@@ -1,7 +1,6 @@
 //! Utilities for parsing
 use std::ops::{Deref, DerefMut};
 use std::hash::Hash;
-use std::iter::{FromIterator, IntoIterator};
 use std::marker::PhantomData;
 
 use indexmap::IndexMap;
