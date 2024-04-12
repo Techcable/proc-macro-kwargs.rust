@@ -77,7 +77,11 @@ macro_arg_parse_map!(f32; via syn::LitFloat, |f| f.base10_parse::<f32>()?);
 macro_arg_parse_map!(char; via syn::LitChar, |c| c.value());
 
 /// The key in a [NestedDict]
-pub trait MacroDictKey = MacroArg + Eq + Hash + Spanned;
+///
+/// This is supposed to be a trait alias,
+/// but those are not yet stable.
+pub trait MacroDictKey: MacroArg + Eq + Hash + Spanned {}
+impl<T: ?Sized + MacroArg + Eq + Hash + Spanned> MacroDictKey for T {}
 
 /// A pair of values in a [NestedDict]
 #[derive(Debug, Clone, Eq, PartialEq)]
