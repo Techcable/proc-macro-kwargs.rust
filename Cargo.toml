@@ -21,7 +21,7 @@ members = ["lib/derive"]
 version = "0.2.0"
 edition = "2021"
 license = "MIT"
-repository = "https://github.com/DuckLogic/proc-macro-kwargs"
+repository = "https://github.com/Techcable/proc-macro-kwargs.rust"
 
 [workspace.dependencies]
 proc-macro2 = { version = "1", default-features = false }
